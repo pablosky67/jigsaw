@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Regina... Salva al Pingüinito</title>
+    <style>
+        body {
+            background-color: #0b090a;
+            color: #f5f3f4;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .game-container {
+            width: 95%;
+            max-width: 650px;
+            background: linear-gradient(145deg, #161a1d, #0b090a);
+            border: 3px solid #a4161a;
+            box-shadow: 0 0 25px #e5383b, inset 0 0 20px rgba(0, 0, 0, 0.9);
+            padding: 25px;
+            text-align: center;
+            border-radius: 8px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .level-badge {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background-color: #a4161a;
+            color: white;
+            padding: 5px 10px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            border-radius: 3px;
+            text-transform: uppercase;
+        }
+
+        /* --- SISTEMA VISUAL DE LA BOMBA Y EL PINGÜINITO --- */
+        .bomb-area {
+            margin: 10px auto 20px auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            background: #000;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #333;
+            max-width: 400px;
+        }
+
+        .pinguino-ascii {
+            font-size: 0.7rem;
+            color: #fff;
+            line-height: 1.1;
+            font-family: monospace;
+            white-space: pre;
+            text-align: left;
+        }
+
+        .fuse-container {
+            flex-grow: 1;
+            text-align: left;
+        }
+
+        .timer {
+            font-size: 2.2rem;
+            color: #e5383b;
+            text-shadow: 0 0 10px #e5383b;
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-family: monospace;
+        }
+
+        /* Barra de la mecha */
+        .fuse-bar-bg {
+            width: 100%;
+            height: 12px;
+            background-color: #222;
+            border: 1px solid #555;
+            border-radius: 6px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .fuse-bar-fill {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(90deg, #ffb3c1, #e5383b);
+            box-shadow: 0 0 8px #ff0000;
+            transition: width 1s linear;
+        }
+
+        .spark {
+            position: absolute;
+            right: 0;
+            top: -2px;
+            color: #ffb703;
+            font-weight: bold;
+            animation: flicker 0.2s infinite;
+        }
+
+        @keyframes flicker {
+            0% { opacity: 0.5; text-shadow: 0 0 5px #ffb703; }
+            100% { opacity: 1; text-shadow: 0 0 12px #ff0000; }
+        }
+
+        /* --- INTERFAZ GENERAL --- */
+        h2 {
+            color: #ba181b;
+            text-transform: uppercase;
+            font-size: 1.3rem;
+            margin: 15px 0;
+        }
+
+        .jigsaw-speech {
+            background-color: #161a1d;
+            border-left: 4px solid #e5383b;
+            padding: 12px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            margin-bottom: 15px;
+            text-align: left;
+            max-height: 130px;
+            overflow-y: auto;
+        }
+
+        .input-box {
+            background-color: #000;
+            border: 1px solid #660708;
+            color: #ffb3c1; 
+            font-family: 'Courier New', monospace;
+            padding: 10px;
+            font-size: 1.1rem;
+            width: 80%;
+            text-align: center;
+            outline: none;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+        }
+
+        .btn-action {
+            background-color: #600707;
+            color: #fff;
+            border: 1px solid #a4161a;
+            padding: 10px 25px;
+            font-size: 0.95rem;
+            cursor: pointer;
+            text-transform: uppercase;
+        }
+
+        .btn-action:hover {
+            background-color: #a4161a;
+            box-shadow: 0 0 12px #e5383b;
+        }
+
+        .screen { display: none; }
+        .active { display: block; }
+
+        .btn-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .grid-btn {
+            background-color: #222;
+            border: 1px solid #444;
+            color: white;
+            padding: 10px;
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+
+        /* --- ANIMACIÓN DE FUEGOS ARTIFICIALES (GANAR) --- */
+        .pyro {
+            display: none;
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 1;
+            pointer-events: none;
+            background: rgba(0,0,0,0.3);
+        }
+        
+        /* --- ANIMACIÓN DE EXPLOSIÓN (PERDER) --- */
+        .explosion-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background-color: #ff0000;
+            z-index: 999;
+            justify-content: center;
+            align-items: center;
+            animation: flash 0.1s infinite;
+        }
+        @keyframes flash {
+            0% { background-color: #ff0000; }
+            50% { background-color: #000; }
+            100% { background-color: #600707; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- EFECTO DE FUEGOS ARTIFICIALES COMPATIBLE -->
+    <div id="pyro-effects" class="pyro"></div>
+
+    <!-- PANTALLA DE EXPLOSIÓN TOTAL -->
+    <div id="explosion" class="explosion-overlay">
+        <div style="text-align: center; color: white; font-family: monospace;">
+            <h1 style="font-size: 5rem; text-shadow: 0 0 20px #fff; margin: 0;">💥 BOOM 💥</h1>
+            <p style="font-size: 1.5rem; letter-spacing: 2px;">EL PINGÜINITO HA EXPLOTADO...</p>
+            <p style="color: #ccc;">No lograste desactivar la trampa a tiempo, Regina.</p>
+            <button class="btn-action" onclick="location.reload()" style="margin-top:20px; background:#000;">Rebobinar Casete</button>
+        </div>
+    </div>
+
+    <div class="game-container" id="main-box">
+        
+        <!-- SECCIÓN DE LA BOMBA Y MECHA -->
+        <div class="bomb-area" id="bomb-hud">
+            <div class="pinguino-ascii">
+   (o_
+   //\
+   V_/_ 💣
+            </div>
+            <div class="fuse-container">
+                <div class="timer" id="global-timer">03:00</div>
+                <div class="fuse-bar-bg">
+                    <div class="fuse-bar-fill" id="fuse-fill">
+                        <span class="spark">⚡</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PRUEBA 1 -->
+        <div id="lvl1" class="screen active">
+            <div class="level-badge">Prueba 1 / 10</div>
+            <h2>Hola Regina... Quiero jugar un juego</h2>
+            <div class="jigsaw-speech">
+                "Un pingüinito tiene una bomba y la mecha se consume rápido. Empecemos de forma pacífica: Soy el roedor más grande, amigable y tierno del mundo. Cuando Baruc te mira, se vuelve tan blando como yo. ¿Qué animal soy?"
+            </div>
+            <input type="text" id="ans1" class="input-box" placeholder="¿Qué animal soy...?" autocomplete="off">
+            <br><button class="btn-action" onclick="checkLvl1()">Siguiente</button>
+        </div>
+
+        <!-- PRUEBA 2 -->
+        <div id="lvl2" class="screen">
+            <div class="level-badge">Prueba 2 / 10</div>
+            <h2>El origen del tiempo</h2>
+            <div class="jigsaw-speech">
+                "El tiempo vuela cuando eres feliz. Introduce los cuatro dígitos exactos del día y mes en que su hermosa historia comenzó en abril de este año. Formato: DD/MM."
+            </div>
+            <input type="text" id="ans2" class="input-box" placeholder="DD/MM" autocomplete="off">
+            <br><button class="btn-action" onclick="checkLvl2()">Desbloquear</button>
+        </div>
+
+        <!-- PRUEBA 3 -->
+        <div id="lvl3" class="screen">
+            <div class="level-badge">Prueba 3 / 10</div>
+            <h2>Tu verdadera identidad</h2>
+            <div class="jigsaw-speech">
+                "Él te llama Degis, Mugosha o Tutuguita... pero hay un apodo en especial que te asocia directamente con este pequeño amiguito que sostiene la bomba. Coloca ese tierno apodo en singular."
+            </div>
+            <input type="text" id="ans3" class="input-box" placeholder="Tu apodo en singular..." autocomplete="off">
+            <br><button class="btn-action" onclick="checkLvl3()">Avanzar</button>
+        </div>
+
+        <!-- PRUEBA 4 -->
+        <div id="lvl4" class="screen">
+            <div class="level-badge">Prueba 4 / 10</div>
+            <h2>Sinfonía de sus latidos</h2>
+            <div class="jigsaw-speech">
+                "Hay melodías grabadas en el pecho. Cierta canción interpretada por los artistas conocidos como 'Los Paros Cardíacos' guarda un significado absoluto entre ustedes. Escribe el título de esa obra."
+            </div>
+            <input type="text" id="ans4" class="input-box" placeholder="Título de la canción..." autocomplete="off">
+            <br><button class="btn-action" onclick="checkLvl4()">Validar canción</button>
+        </div>
+
+        <!-- PRUEBA 5 -->
+        <div id="lvl5" class="screen">
+            <div class="level-badge">Prueba 5 / 10</div>
+            <h2>La mañana del examen</h2>
+            <div class="jigsaw-speech">
+                "El 21 de junio te enfrentaste a una dura prueba académica, pero antes de que abrieras el examen, él te entregó un refugio digital con mensajes de apoyo. ¿De qué color era la galaxia de esa página?"
+            </div>
+            <input type="text" id="ans5" class="input-box" placeholder="¿De qué color era...?" autocomplete="off">
+            <br><button class="btn-action" onclick="checkLvl5()">Verificar color</button>
+        </div>
+
+        <!-- PRUEBA 6 -->
+        <div id="lvl6" class="screen">
+            <div class="level-badge">Prueba 6 / 10</div>
+            <h2>Pasión en la cancha</h2>
+            <div class="jigsaw-speech">
+                "El amor también comparte pasiones de fin de semana. Baruc tiene grabado un escudo en el pecho, un equipo mexicano cuya garra e historia él sigue fielmente. ¿Qué club es?"
+            </div>
+            <input type="text" id="ans6" class="input-box" placeholder="Nombre del equipo..." autocomplete="off">
+            <br><button class="btn-action" onclick="checkLvl6()">Comprobar</button>
+        </div>
+
+        <!-- PRUEBA 7 (NUEVA: REEMPLAZADA POR TU ENTORNO) -->
+        <div id="lvl7" class="screen">
+            <div class="level-badge">Prueba 7 / 10</div>
+            <h2>El primer gran hito</h2>
+            <div class="jigsaw-speech">
+                "A las 12:00 de la noche del 23 de junio, un contador digital llegó a su fin para celebrar una marca muy especial en su línea del tiempo. ¿Cuántos meses exactos cumplieron juntos ese día a la medianoche?"
+            </div>
+            <input type="text" id="ans7" class="input-box" placeholder="Escribe el número o palabra..." autocomplete="off">
+            <br><button class="btn-action" onclick="checkLvl7()">Cortar cable</button>
+        </div>
+
+        <!-- PRUEBA 8 -->
+        <div id="lvl8" class="screen">
+            <div class="level-badge">Prueba 8 / 10</div>
+            <h2>Un rincón musical</h2>
+            <div class="jigsaw-speech">
+                "En su rincón secreto de la web, hay una playlist interactiva con fondo oscuro hecha especialmente para ti. ¿Cuántas canciones exactas componen la lista musical de ese proyecto estable?"
+            </div>
+            <input type="number" id="ans8" class="input-box" placeholder="Número de canciones...">
+            <br><button class="btn-action" onclick="checkLvl8()">Sincronizar</button>
+        </div>
+
+        <!-- PRUEBA 9 -->
+        <div id="lvl9" class="screen">
+            <div class="level-badge">Prueba 9 / 10</div>
+            <h2>Iniciales unidas</h2>
+            <div class="jigsaw-speech">
+                "En sus primeros diseños de código, unas iniciales erróneas casi lo arruinan. Tras corregirlo, quedaron únicamente las dos letras correctas que los unen a ti y a él. Ponlas juntas."
+            </div>
+            <input type="text" id="ans9" class="input-box" placeholder="Dos letras..." autocomplete="off">
+            <br><button class="btn-action" onclick="checkLvl9()">Unir</button>
+        </div>
+
+        <!-- PRUEBA 10 -->
+        <div id="lvl10" class="screen">
+            <div class="level-badge">Prueba 10 / 10</div>
+            <h2>La desactivación final</h2>
+            <div class="jigsaw-speech">
+                "La mecha está por quemar al pingüinito. Ordena los fragmentos para apagar la bomba y firmar tu destino al lado de Baruc:"
+            </div>
+            <div class="btn-grid">
+                <button class="grid-btn" onclick="addWord('SIEMPRE')">SIEMPRE</button>
+                <button class="grid-btn" onclick="addWord('TE')">TE</button>
+                <button class="grid-btn" onclick="addWord('AMARÉ')">AMARÉ</button>
+            </div>
+            <p style="margin-top: 15px;">Promesa: <strong id="phrase-build" style="color:#ffb3c1;"></strong></p>
+            <button class="btn-action" onclick="checkLvl10()">¡APAGAR BOMBA!</button>
+        </div>
+
+        <!-- PANTALLA VICTORIA -->
+        <div id="win-screen" class="screen">
+            <h1 style="color:#00ff00; font-size:2.3rem; text-shadow: 0 0 15px #00ff00; margin-bottom: 10px;">✨ ¡BOMBA DESACTIVADA! ✨</h1>
+            <p style="font-size:1.2rem; color: #ffb3c1; font-weight: bold;">¡El pingüinito está a salvo!</p>
+            <p style="font-size:1rem; line-height: 1.6; text-align: left; background: #111; padding: 15px; border-radius: 5px; border-left: 4px solid #00ff00;">
+                Felicidades, mi niña chiquita. Has demostrado que tu memoria y tu gran corazón conocen a la perfección cada pedacito de nuestra historia. Gracias por salvar al pingüinito... y gracias por hacerme el niño más feliz cada día. ¡Vivirás una vida eterna llena de amor a mi lado! ❤️
+            </p>
+        </div>
+    </div>
+
+    <script font-color="white">
+        let timeLeft = 180; // 3 minutos
+        const totalTime = 180;
+        let timerInterval;
+        let finalPhrase = [];
+
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                
+                // Actualizar números del Reloj
+                let min = Math.floor(timeLeft / 60);
+                let sec = timeLeft % 60;
+                document.getElementById('global-timer').innerText = 
+                    `${min < 10 ? '0'+min : min}:${sec < 10 ? '0'+sec : sec}`;
+
+                // Mover y quemar la mecha (Porcentaje decreciente)
+                let percentage = (timeLeft / totalTime) * 100;
+                document.getElementById('fuse-fill').style.width = percentage + "%";
+
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    triggerExplosion();
+                }
+            }, 1000);
+        }
+
+        function showScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+        }
+
+        function triggerExplosion() {
+            document.getElementById('bomb-hud').style.display = 'none';
+            document.getElementById('main-box').style.display = 'none';
+            document.getElementById('explosion').style.display = 'flex';
+        }
+
+        function triggerVictory() {
+            document.getElementById('bomb-hud').style.display = 'none';
+            document.getElementById('pyro-effects').style.display = 'block';
+            // Crear simulación básica de luces de fondo de fuegos artificiales
+            document.body.style.background = "radial-gradient(circle, #200424 0%, #0b090a 100%)";
+            showScreen('win-screen');
+        }
+
+        // VALIDACIONES CORREGIDAS
+        function checkLvl1() {
+            let ans = document.getElementById('ans1').value.trim().toLowerCase();
+            if(ans.includes('carpincho') || ans.includes('capibara')) showScreen('lvl2');
+            else alert("Incorrecto... la mecha sigue ardiendo.");
+        }
+
+        function checkLvl2() {
+            let ans = document.getElementById('ans2').value.trim();
+            if(ans === "23/04" || ans === "23-04" || ans === "23 de abril") showScreen('lvl3');
+            else alert("Mecanismo bloqueado... Piensa en abril.");
+        }
+
+        function checkLvl3() {
+            let ans = document.getElementById('ans3').value.trim().toLowerCase();
+            if(ans === 'pinguinita' || ans === 'pingüinita') showScreen('lvl4');
+            else alert("Ese no es el apodo en singular...");
+        }
+
+        function checkLvl4() {
+            let ans = document.getElementById('ans4').value.trim().toLowerCase();
+            if(ans.includes('besos')) showScreen('lvl5');
+            else alert("La melodía cruje de forma errónea...");
+        }
+
+        function checkLvl5() {
+            let ans = document.getElementById('ans5').value.trim().toLowerCase();
+            if(ans.includes('morado') || ans.includes('purpura') || ans.includes('púrpura')) showScreen('lvl6');
+            else alert("Ese color no cubría la galaxia...");
+        }
+
+        function checkLvl6() {
+            let ans = document.getElementById('ans6').value.trim().toLowerCase();
+            if(ans.includes('pumas') || ans.includes('unam')) showScreen('lvl7');
+            else alert("Equipo equivocado...");
+        }
+
+        function checkLvl7() {
+            let ans = document.getElementById('ans7').value.trim().toLowerCase();
+            if(ans.includes('2') || ans.includes('dos')) showScreen('lvl8');
+            else alert("No fue esa cantidad de meses...");
+        }
+
+        function checkLvl8() {
+            let ans = document.getElementById('ans8').value.trim();
+            if(ans === "3") showScreen('lvl9');
+            else alert("Playlist desincronizada. Cuenta bien.");
+        }
+
+        function checkLvl9() {
+            let ans = document.getElementById('ans9').value.trim().toUpperCase();
+            if(ans === "RP" || ans === "R P") showScreen('lvl10');
+            else alert("Las iniciales correctas abren el penúltimo candado...");
+        }
+
+        function addWord(word) {
+            if(!finalPhrase.includes(word)) {
+                finalPhrase.push(word);
+                document.getElementById('phrase-build').innerText = finalPhrase.join(' ');
+            }
+        }
+
+        function checkLvl10() {
+            let combined = finalPhrase.join(' ');
+            if(combined === "TE AMARÉ SIEMPRE") {
+                clearInterval(timerInterval);
+                triggerVictory();
+            } else {
+                alert("La bomba sigue activa, reordena bien.");
+                finalPhrase = [];
+                document.getElementById('phrase-build').innerText = "";
+            }
+        }
+
+        window.onload = startTimer;
+    </script>
+</body>
+</html>
